@@ -51,7 +51,7 @@ pip install psutil scapy matplotlib requests
 
    ```bash
    git clone https://github.com/Diogo-Lages/NetworkMonitor.py.git
-   cd network-monitor
+   cd Network_Monitor
    ```
 
 2. Install the required dependencies:
