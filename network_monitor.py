@@ -13,23 +13,22 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import requests
 
-# ANSI Color Codes
-RESTART = '\033[0m'  # Reset to default
-B = '\033[0;30m'  # Black
-R = '\033[0;31m'  # Red
-G = '\033[0;32m'  # Green
-Y = '\033[0;33m'  # Yellow
-BLU = '\033[0;34m'  # Blue
-P = '\033[0;35m'  # Purple
-C = '\033[0;36m'  # Cyan
-W = '\033[0;37m'  # White
 
-# Temporary LocalHost IP Address
+# ANSI Color Codes
+RESTART = '\033[0m'
+B = '\033[0;30m'
+R = '\033[0;31m'
+G = '\033[0;32m'
+Y = '\033[0;33m'
+BLU = '\033[0;34m'
+P = '\033[0;35m'
+C = '\033[0;36m'
+W = '\033[0;37m'
+
 IP_ADDRESS = "127.0.0.1"
 
 
 def get_ip_address():
-    """Get the local machine's IP address."""
     system = platform.system()
     if system == "Windows":
         hostname = socket.gethostname()
@@ -45,10 +44,6 @@ def get_ip_address():
 
 
 def get_process_name_by_port(port):
-    """
-    Get the process name associated with a given port.
-    Uses psutil.net_connections() to map ports to PIDs.
-    """
     try:
         for conn in psutil.net_connections(kind='inet'):
             if conn.laddr.port == port or (conn.raddr and conn.raddr.port == port):
@@ -68,10 +63,6 @@ class GeoIPLookup:
         self.api_key = api_key
 
     def lookup(self, ip):
-        """
-        Perform a GeoIP lookup for the given IP address.
-        Returns location details or "Unknown Location" on failure.
-        """
         try:
             response = requests.get(f"http://api.ipstack.com/{ip}", params={"access_key": self.api_key})
             if response.status_code == 200:
@@ -159,7 +150,6 @@ class NetworkMonitorApp:
         self.bandwidth_out = []
 
     def packet_callback(self, packet):
-        """Callback function to process each captured packet."""
         if not self.running:
             return
 
@@ -172,35 +162,35 @@ class NetworkMonitorApp:
             port = "N/A"
             size = len(packet)
 
-            if proto == 6:  # TCP
+            if proto == 6:
                 protocol = "TCP"
                 if packet.haslayer(TCP):
                     port = packet[TCP].sport
                     process_name = get_process_name_by_port(packet[TCP].sport)
-            elif proto == 17:  # UDP
+            elif proto == 17:
                 protocol = "UDP"
                 if packet.haslayer(UDP):
                     port = packet[UDP].sport
                     process_name = get_process_name_by_port(packet[UDP].sport)
-            elif proto == 1:  # ICMP
+            elif proto == 1:
                 protocol = "ICMP"
                 process_name = "System"
-            elif packet.haslayer(DNS):  # DNS
+            elif packet.haslayer(DNS):
                 protocol = "DNS"
                 process_name = "System"
-            elif packet.haslayer(Raw) and b"HTTP" in bytes(packet[Raw]):  # HTTP
+            elif packet.haslayer(Raw) and b"HTTP" in bytes(packet[Raw]):
                 protocol = "HTTP"
                 process_name = "System"
-            elif packet.haslayer(TCP) and packet[TCP].dport == 21:  # FTP
+            elif packet.haslayer(TCP) and packet[TCP].dport == 21:
                 protocol = "FTP"
                 process_name = "System"
-            elif packet.haslayer(TCP) and packet[TCP].dport == 25:  # SMTP
+            elif packet.haslayer(TCP) and packet[TCP].dport == 25:
                 protocol = "SMTP"
                 process_name = "System"
-            elif packet.haslayer(UDP) and packet[UDP].dport == 161:  # SNMP
+            elif packet.haslayer(UDP) and packet[UDP].dport == 161:
                 protocol = "SNMP"
                 process_name = "System"
-            elif packet.haslayer(TCP) and packet[TCP].dport == 143:  # IMAP
+            elif packet.haslayer(TCP) and packet[TCP].dport == 143:
                 protocol = "IMAP"
                 process_name = "System"
             else:
@@ -224,7 +214,6 @@ class NetworkMonitorApp:
             self.update_bandwidth_graph()
 
     def start_monitoring(self):
-        """Start capturing network packets."""
         self.running = True
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
@@ -233,44 +222,46 @@ class NetworkMonitorApp:
         self.sniff_thread.start()
 
     def stop_monitoring(self):
-        """Stop capturing network packets."""
         self.running = False
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
 
     def start_sniffing(self):
-        """Start the packet sniffing process."""
         sniff(prn=self.packet_callback, filter="ip", store=0)
 
     def update_bandwidth_graph(self):
-        """Update the real-time bandwidth graph."""
         self.timestamps.append(time.time())
-        self.bandwidth_in.append(self.total_bytes_in)
-        self.bandwidth_out.append(self.total_bytes_out)
+        self.bandwidth_in.append(self.total_bytes_in / 1024)
+        self.bandwidth_out.append(self.total_bytes_out / 1024)
 
-        if len(self.timestamps) > 10:  # Limit data points to 10
+        if len(self.timestamps) > 10:
             self.timestamps.pop(0)
             self.bandwidth_in.pop(0)
             self.bandwidth_out.pop(0)
 
         self.ax.clear()
-        self.ax.plot(self.timestamps, self.bandwidth_in, label="Inbound", color="blue")
-        self.ax.plot(self.timestamps, self.bandwidth_out, label="Outbound", color="red")
+        self.ax.plot(self.timestamps, self.bandwidth_in, label="Inbound (KB)", color="blue")
+        self.ax.plot(self.timestamps, self.bandwidth_out, label="Outbound (KB)", color="red")
         self.ax.set_title("Real-Time Bandwidth Usage")
         self.ax.set_xlabel("Time")
-        self.ax.set_ylabel("Bytes")
+        self.ax.set_ylabel("Data (KB)")
         self.ax.legend()
+        self.ax.grid(True)
         self.canvas.draw()
 
     def apply_filters(self):
-        """Apply filters based on user input."""
-        ip_filter = self.ip_filter.get().strip()
-        port_filter = self.port_filter.get().strip()
-        protocol_filter = self.protocol_filter.get().strip()
+        ip_filter = self.ip_filter.get().strip().lower()
+        port_filter = self.port_filter.get().strip().lower()
+        protocol_filter = self.protocol_filter.get().strip().lower()
 
         for child in self.tree.get_children():
             values = self.tree.item(child, "values")
-            src_ip, dst_ip, protocol, port = values[1], values[2], values[3], values[4]
+            src_ip, dst_ip, protocol, port = (
+                values[1].lower(),
+                values[2].lower(),
+                values[3].lower(),
+                values[4].lower(),
+            )
 
             if (
                 (not ip_filter or ip_filter in src_ip or ip_filter in dst_ip)
@@ -282,12 +273,10 @@ class NetworkMonitorApp:
                 self.tree.detach(child)
 
     def reset_filters(self):
-        """Reset all filters and restore the default view."""
         for child in self.tree.get_children():
             self.tree.reattach(child, "", 0)
 
     def toggle_auto_scroll(self):
-        """Toggle auto-scroll functionality."""
         self.auto_scroll = not self.auto_scroll
         if self.auto_scroll:
             self.toggle_scroll_button.config(text="Disable Auto Scroll")
