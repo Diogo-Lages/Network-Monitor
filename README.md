@@ -50,8 +50,8 @@ pip install psutil scapy matplotlib requests
 1. Clone the repository or download the source code:
 
    ```bash
-   git clone https://github.com/Diogo-Lages/NetworkMonitor.py.git
-   cd Network_Monitor.py
+   git clone https://github.com/Diogo-Lages/Network-Monitor.git
+   cd Network-Monitor
    ```
 
 2. Install the required dependencies:
